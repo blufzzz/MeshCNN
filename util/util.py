@@ -17,19 +17,33 @@ def is_mesh_file(filename):
 
 def pad(input_arr, target_length, val=0, dim=1):
     shp = input_arr.shape
+    # print(shp)
     npad = [(0, 0) for _ in range(len(shp))]
     npad[dim] = (0, target_length - shp[dim])
     return np.pad(input_arr, pad_width=npad, mode='constant', constant_values=val)
 
 def seg_accuracy(predicted, ssegs, meshes):
     correct = 0
+    pr = 0
+    re = 0
     ssegs = ssegs.squeeze(-1)
+    gt = torch.argmax(ssegs, dim=2)
+    tp = gt * predicted.cpu()
+    tp_fp = predicted.cpu()
+    tp_fn = gt
     correct_mat = ssegs.gather(2, predicted.cpu().unsqueeze(dim=2))
     for mesh_id, mesh in enumerate(meshes):
         correct_vec = correct_mat[mesh_id, :mesh.edges_count, 0]
         edge_areas = torch.from_numpy(mesh.get_edge_areas())
         correct += (correct_vec.float() * edge_areas).sum()
-    return correct
+        tp_i = tp[mesh_id, :mesh.edges_count]
+        tp_fp_i = tp_fp[mesh_id, :mesh.edges_count]
+        tp_fn_i = tp_fn[mesh_id, :mesh.edges_count]
+        if tp_fp_i.float().sum() > 0:
+            pr += (tp_i.float() * edge_areas).sum() / (tp_fp_i.float() * edge_areas).sum()
+        if tp_fn_i.float().sum() > 0:
+            re += (tp_i.float() * edge_areas).sum() / (tp_fn_i.float() * edge_areas).sum()
+    return correct, pr, re
 
 def print_network(net):
     """Print the total number of parameters in the network

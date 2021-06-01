@@ -2,7 +2,7 @@ import torch
 from . import networks
 from os.path import join
 from util.util import seg_accuracy, print_network
-
+import numpy as np
 
 class ClassifierModel:
     """ Class for training Model weights
@@ -49,7 +49,7 @@ class ClassifierModel:
         self.edge_features = input_edge_features.to(self.device).requires_grad_(self.is_train)
         self.labels = labels.to(self.device)
         self.mesh = data['mesh']
-        if self.opt.dataset_mode == 'segmentation' and not self.is_train:
+        if self.opt.dataset_mode == 'segmentation':# and not self.is_train:
             self.soft_label = torch.from_numpy(data['soft_label'])
 
 
@@ -64,8 +64,12 @@ class ClassifierModel:
     def optimize_parameters(self):
         self.optimizer.zero_grad()
         out = self.forward()
+        pred_class = out.data.max(1)[1]
+        label_class = self.labels
+        correct, pr, re = self.get_accuracy(pred_class, label_class)
         self.backward(out)
         self.optimizer.step()
+        return correct, len(label_class), pr, re
 
 
 ##################
@@ -111,17 +115,22 @@ class ClassifierModel:
             # compute number of correct
             pred_class = out.data.max(1)[1]
             label_class = self.labels
-            self.export_segmentation(pred_class.cpu())
-            correct = self.get_accuracy(pred_class, label_class)
-        return correct, len(label_class)
+            a = pred_class.detach().cpu().numpy()
+            b = label_class.detach().cpu().numpy()
+            c = np.logical_and(a, b).astype('int') + np.logical_or(a, b).astype('int') + a.astype('int')
+            c = torch.from_numpy(c).long()
+            self.export_segmentation(c.cpu())
+            correct, pr, re = self.get_accuracy(pred_class, label_class)
+        return correct, len(label_class), pr, re
 
     def get_accuracy(self, pred, labels):
         """computes accuracy for classification / segmentation """
         if self.opt.dataset_mode == 'classification':
             correct = pred.eq(labels).sum()
+            pr, re = -1, -1
         elif self.opt.dataset_mode == 'segmentation':
-            correct = seg_accuracy(pred, self.soft_label, self.mesh)
-        return correct
+            correct, pr, re = seg_accuracy(pred, self.soft_label, self.mesh)
+        return correct, pr, re
 
     def export_segmentation(self, pred_seg):
         if self.opt.dataset_mode == 'segmentation':

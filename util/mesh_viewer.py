@@ -7,9 +7,18 @@ V = np.array
 r2h = lambda x: colors.rgb2hex(tuple(map(lambda y: y / 255., x)))
 surface_color = r2h((255, 230, 205))
 edge_color = r2h((90, 90, 90))
-edge_colors = (r2h((15, 167, 175)), r2h((230, 81, 81)), r2h((142, 105, 252)), r2h((248, 235, 57)),
+edge_colors = (r2h((15, 167, 175)),
+               r2h((230, 81, 81)),
+               r2h((142, 105, 252)),
+               r2h((248, 235, 57)),
                r2h((51, 159, 255)), r2h((225, 117, 231)), r2h((97, 243, 185)), r2h((161, 183, 196)))
-
+label_dict = {
+    0: 'TN',
+    1: 'FN',
+    2: 'FP',
+    3: 'TP',
+    -42: None
+}
 
 
 
@@ -57,10 +66,13 @@ def surfaces(mesh, plot):
 
 def segments(mesh, plot):
     vs, _, edges = mesh
+
     for edge_c, edge_group in enumerate(edges):
+        label_name = edge_c
         for edge_idx in edge_group:
             edge = vs[edge_idx]
-            line = a3.art3d.Line3DCollection([edge],  linewidths=.5, linestyles='dashdot')
+            line = a3.art3d.Line3DCollection([edge],  linewidths=.5, linestyles='dashdot', label=label_dict[label_name])
+            label_name = -42
             line.set_color(edge_colors[edge_c % len(edge_colors)])
             plot[0].add_collection3d(line)
     return plot
@@ -69,6 +81,7 @@ def segments(mesh, plot):
 def plot_mesh(mesh, *whats, show=True, plot=None):
     for what in [update_plot] + list(whats):
         plot = what(mesh, plot)
+    plot[0].legend()
     if show:
         li = max(plot[1][1], plot[1][3], plot[1][5])
         plot[0].auto_scale_xyz([0, li], [0, li], [0, li])

@@ -17,6 +17,8 @@ class Writer:
         self.start_logs()
         self.nexamples = 0
         self.ncorrect = 0
+        self.pr = 0
+        self.re = 0
         #
         if opt.is_train and not opt.no_vis and SummaryWriter is not None:
             self.display = SummaryWriter(comment=opt.name)
@@ -64,6 +66,27 @@ class Writer:
         if self.display:
             self.display.add_scalar('data/test_acc', acc, epoch)
 
+    def plot_pr(self, pr, epoch):
+        if self.display:
+            self.display.add_scalar('data/test_pr', pr, epoch)
+
+    def plot_re(self, re, epoch):
+        if self.display:
+            self.display.add_scalar('data/test_re', re, epoch)
+
+    def plot_train_acc(self, acc, epoch):
+        if self.display:
+            self.display.add_scalar('data/train_acc', acc, epoch)
+
+    def plot_train_pr(self, pr, epoch):
+        if self.display:
+            self.display.add_scalar('data/train_pr', pr, epoch)
+
+    def plot_train_re(self, re, epoch):
+        if self.display:
+            self.display.add_scalar('data/train_re', re, epoch)
+
+
     def reset_counter(self):
         """
         counts # of correct examples
@@ -75,9 +98,22 @@ class Writer:
         self.ncorrect += ncorrect
         self.nexamples += nexamples
 
+    def update_counter_pr_re(self, pr, re):
+        self.pr += pr
+        self.re += re
+
     @property
     def acc(self):
         return float(self.ncorrect) / self.nexamples
+
+    @property
+    def opr(self):
+        return float(self.pr) / self.nexamples
+
+    @property
+    def ore(self):
+        return float(self.re) / self.nexamples
+
 
     def close(self):
         if self.display is not None:

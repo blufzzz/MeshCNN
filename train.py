@@ -10,13 +10,16 @@ if __name__ == '__main__':
     # opt.serial_batches = True  # no shuffle
     dataset = DataLoader(opt)
     dataset_size = len(dataset)
+
     print('#training meshes = %d' % dataset_size)
 
     model = create_model(opt)
     writer = Writer(opt)
     total_steps = 0
 
-    for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
+    for epoch in range(opt.epoch_count, 
+                        opt.niter + opt.niter_decay + 1):
+    
         epoch_start_time = time.time()
         iter_data_time = time.time()
         epoch_iter = 0
@@ -33,15 +36,13 @@ if __name__ == '__main__':
             total_steps += opt.batch_size
             epoch_iter += opt.batch_size
             model.set_input(data)
-            try:
-                ncorrect, nexamples, pr, re = model.optimize_parameters()
-            except AssertionError:
-                print('ZHOPA'*20)
-                continue
+            ncorrect, nexamples, pr, re = model.optimize_parameters()
+            
             o_ncorrect += ncorrect
             o_nexamples += nexamples
             o_pr += pr
             o_re += re
+            
             if total_steps % opt.print_freq == 0:
                 loss = model.loss
                 t = (time.time() - iter_start_time) / opt.batch_size
@@ -54,6 +55,7 @@ if __name__ == '__main__':
                 model.save_network('latest')
 
             iter_data_time = time.time()
+
         if epoch % opt.save_epoch_freq == 0:
             print('saving the model at the end of epoch %d, iters %d' %
                   (epoch, total_steps))

@@ -13,10 +13,10 @@ class SegmentationData(BaseDataset):
         self.device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if opt.gpu_ids else torch.device('cpu')
         self.root = opt.dataroot
         self.dir = os.path.join(opt.dataroot, opt.phase)
-        self.paths = sorted(self.make_dataset(self.dir))
-        self.seg_paths = self.get_seg_files(self.paths, os.path.join(self.root, 'seg'), seg_ext='.eseg')
-        self.sseg_paths = self.get_seg_files(self.paths, os.path.join(self.root, 'sseg'), seg_ext='.seseg')
-        self.classes, self.offset = self.get_n_segs(os.path.join(self.root, 'classes.txt'), self.seg_paths)
+        self.paths = sorted(self.make_dataset(self.dir)) # mesh paths
+        self.seg_paths = self.get_seg_files(self.paths, os.path.join(self.root, 'seg'), seg_ext='.eseg') # labels
+        self.sseg_paths = self.get_seg_files(self.paths, os.path.join(self.root, 'sseg'), seg_ext='.seseg') # soft-labels
+        self.classes, self.offset = self.get_n_segs(os.path.join(self.root, 'classes.txt'), self.seg_paths) # ???
         self.nclasses = len(self.classes)
         self.size = len(self.paths)
         self.get_mean_std()
@@ -25,8 +25,10 @@ class SegmentationData(BaseDataset):
         opt.input_nc = self.ninput_channels
 
     def __getitem__(self, index):
+        
         path = self.paths[index]
         mesh = Mesh(file=path, opt=self.opt, hold_history=True, export_folder=self.opt.export_folder)
+        
         meta = {}
         meta['mesh'] = mesh
         label = read_seg(self.seg_paths[index]) - self.offset
@@ -38,6 +40,7 @@ class SegmentationData(BaseDataset):
         edge_features = mesh.extract_features()
         edge_features = pad(edge_features, self.opt.ninput_edges)
         meta['edge_features'] = (edge_features - self.mean) / self.std
+        
         return meta
 
     def __len__(self):

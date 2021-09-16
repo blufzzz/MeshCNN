@@ -3,7 +3,6 @@ import torch
 import numpy as np
 import os
 
-
 def mkdir(path):
     if not os.path.exists(path):
         os.makedirs(path)
@@ -80,3 +79,5 @@ def calculate_entropy(np_array):
             entropy -= a * np.log(a)
     entropy /= np.log(np_array.shape[0])
     return entropy
+
+

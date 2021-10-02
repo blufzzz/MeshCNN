@@ -1,4 +1,4 @@
-import torch.utils.data
+import torch
 from data.base_dataset import collate_fn
 
 def CreateDataset(opt):

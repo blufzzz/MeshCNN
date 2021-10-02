@@ -1,11 +1,21 @@
-distributed_train: false
-experiment_dir: './logs'
-interpolation_size: [128, 128, 128]  #[91,109,91]
+dataroot: '../fcd_newdataset_meshes_s10_p1_v1_outer/prepared/'
+name: 'fcd_seg'
+arch: 'meshunet'
+dataset_mode: 'segmentation'
+ncf: [16,32,64]
+ninput_edges: 16600 #s10 - 16598, s20 - 3905
+pool_res: [10000, 6000] 
+resblocks: 1
+batch_size: 1
+
+gpu_ids: 0
+
+# distributed_train: false
+# experiment_dir: './logs'
+# interpolation_size: [128, 128, 128]  #[91,109,91]
 
 print_freq: 10 #frequency of showing training results on console
-
-print_freq: 10
-save_latest_freq: 10 # help='frequency of saving the latest results
+save_latest_freq: 10 # frequency of saving the latest results
 save_epoch_freq: 1 # help='frequency of saving checkpoints at the end of epochs
 run_test_freq: 1 # help='frequency of running test in training script
 continue_train: false # load the latest model
@@ -21,7 +31,7 @@ lr_policy: 'lambda' # learning rate policy: lambda|step|plateau
 lr_decay_iters: 50 # multiply by a gamma every lr_decay_iters iterations
 
 # data augmentation stuff
-num_aug': 10 # of augmentation files
+num_aug: 10 # of augmentation files
 scale_verts: true # non-uniformly scale the mesh e.g., in x, y or z
 slide_verts: 0 # percent vertices which will be shifted along the mesh surface
 flip_edges: 0 # percent of edges to randomly flip
@@ -31,17 +41,25 @@ no_vis: true # will not use tensorboard
 verbose_plot: true# plots network weights, etc.
 is_train: True
 
-dataroot: '..//fcd_seg'
-name: 'fcd_seg'
-arch: 'meshunet'
-dataset_mode: 'segmentation'
-ncf: [16,32,64]
-ninput_edges: 17000
-pool_res: [10000, 6000] 
-resblocks: 1
-batch_size: 1
-lr: 0.003
-num_aug: 20
-slide_verts: 0.2
+# BASE_OPTIONS
 
-gpu_ids: 0
+max_dataset_size: 99999999999
+
+# network params
+fc_n: 100 # between fc and nclasses, todo: make generic
+norm: 'batch' # instance normalization or batch normalization or group normalization
+num_groups: 16 # of groups for groupnorm'
+init_type: 'normal' # network initialization [normal|xavier|kaiming|orthogonal]
+init_gain: 0.02 # scaling factor for normal, xavier and orthogonal.
+
+# general params
+num_threads: 3 # threads for loading data
+checkpoints_dir: './checkpoints:' # models are saved here
+serial_batches: true # if true, takes meshes in order, otherwise takes them randomly
+seed: 42 # if specified, uses seed
+
+# visualization params
+export_folder: '' # exports intermediate collapses to this folder
+save_checkpoint: ''  # exports intermediate collapses to this folder
+
+initialized: true

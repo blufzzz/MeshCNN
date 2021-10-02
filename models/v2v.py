@@ -120,7 +120,7 @@ class EncoderDecorder(nn.Module):
 
         x = self.decoder_res5(x)
         x = self.decoder_upsample5(x)
-        x = x + skip_x5 # 
+        x = x + skip_x5 
         x = self.decoder_res4(x)
         x = self.decoder_upsample4(x)
         x = x + skip_x4

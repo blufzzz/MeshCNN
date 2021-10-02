@@ -1,6 +1,7 @@
 .idea/*
 *.pyc
 *.m~
+*.npy
 logs/
 # data files
 *.obj

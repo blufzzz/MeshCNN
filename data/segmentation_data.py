@@ -4,6 +4,9 @@ from data.base_dataset import BaseDataset
 from util.util import is_mesh_file, pad
 import numpy as np
 from models.layers.mesh import Mesh
+import glob
+
+from IPython.core.debugger import set_trace
 
 class SegmentationData(BaseDataset):
 
@@ -11,15 +14,21 @@ class SegmentationData(BaseDataset):
         BaseDataset.__init__(self, opt)
         self.opt = opt
         self.device = torch.device('cuda:{}'.format(opt.gpu_ids[0])) if opt.gpu_ids else torch.device('cpu')
-        self.root = opt.dataroot
-        self.dir = os.path.join(opt.dataroot, opt.phase)
-        self.paths = sorted(self.make_dataset(self.dir)) # mesh paths
-        self.seg_paths = self.get_seg_files(self.paths, os.path.join(self.root, 'seg'), seg_ext='.eseg') # labels
-        self.sseg_paths = self.get_seg_files(self.paths, os.path.join(self.root, 'sseg'), seg_ext='.seseg') # soft-labels
-        self.classes, self.offset = self.get_n_segs(os.path.join(self.root, 'classes.txt'), self.seg_paths) # ???
+        self.root = opt.dataroot # ../fcd_newdataset_meshes/prepared/
+        self.dir = os.path.join(opt.dataroot, opt.phase) # ../fcd_newdataset_meshes/prepared/train
+
+        
+        # self.paths = sorted(self.make_dataset(self.dir)) # mesh paths
+        self.paths = list(filter(lambda x: '.obj' in x, glob.glob(os.path.join(self.dir, '*')))) # REPLACED!
+
+        self.seg_paths = self.get_seg_files(self.paths, os.path.join(self.root, 'seg'), seg_ext='.eseg') # labels, OK!
+
+        self.sseg_paths = self.get_seg_files(self.paths, os.path.join(self.root, 'sseg'), seg_ext='.seseg') # soft-labels, OK!
+        
+        self.classes, self.offset = self.get_n_segs(os.path.join(self.root, 'classes.txt'), self.seg_paths)
         self.nclasses = len(self.classes)
         self.size = len(self.paths)
-        self.get_mean_std()
+        self.get_mean_std() # it will take time!
         # # modify for network later.
         opt.nclasses = self.nclasses
         opt.input_nc = self.ninput_channels
@@ -28,11 +37,10 @@ class SegmentationData(BaseDataset):
         
         path = self.paths[index]
         mesh = Mesh(file=path, opt=self.opt, hold_history=True, export_folder=self.opt.export_folder)
-        
         meta = {}
         meta['mesh'] = mesh
-        label = read_seg(self.seg_paths[index]) - self.offset
-        label = pad(label, self.opt.ninput_edges, val=-1, dim=0)
+        label = read_seg(self.seg_paths[index]) - self.offset # [0,0,1,...,1,0]
+        label = pad(label, self.opt.ninput_edges, val=-1, dim=0) # here!
         meta['label'] = label
         soft_label = read_sseg(self.sseg_paths[index])
         meta['soft_label'] = pad(soft_label, self.opt.ninput_edges, val=-1, dim=0)
@@ -50,8 +58,12 @@ class SegmentationData(BaseDataset):
     def get_seg_files(paths, seg_dir, seg_ext='.seg'):
         segs = []
         for path in paths:
-            segfile = os.path.join(seg_dir, os.path.splitext(os.path.basename(path))[0] + seg_ext)
-            assert(os.path.isfile(segfile))
+            segname = os.path.splitext(os.path.basename(path))[0] + seg_ext
+            segfile = os.path.join(seg_dir, segname)
+            try:
+                assert(os.path.isfile(segfile))
+            except:
+                set_trace() # cache.seg?
             segs.append(segfile)
         return segs
 
@@ -60,7 +72,8 @@ class SegmentationData(BaseDataset):
         if not os.path.isfile(classes_file):
             all_segs = np.array([], dtype='float64')
             for seg in seg_files:
-                all_segs = np.concatenate((all_segs, read_seg(seg)))
+                seg_file = read_seg(seg) # (6287289,), unique [1,2] 
+                all_segs = np.concatenate((all_segs, np.unique(seg_file))) # read_seg takes a lot of time!
             segnames = np.unique(all_segs)
             np.savetxt(classes_file, segnames, fmt='%d')
         classes = np.loadtxt(classes_file)
@@ -69,7 +82,7 @@ class SegmentationData(BaseDataset):
         return classes, offset
 
     @staticmethod
-    def make_dataset(path):
+    def make_dataset(path): # path = ../fcd_newdataset_meshes/prepared/train
         meshes = []
         assert os.path.isdir(path), '%s is not a valid directory' % path
 

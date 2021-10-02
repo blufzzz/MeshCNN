@@ -45,7 +45,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def one_epoch(model, criterion, opt, config, dataloader, device, writer, epoch, is_train=True):
+def one_epoch(model, criterion, opt, config, dataloader, device, writer, epoch, metric_dict_epoch, is_train=True):
 
     metric_dict = defaultdict(list)
     # used to turn on/off gradients
@@ -54,39 +54,39 @@ def one_epoch(model, criterion, opt, config, dataloader, device, writer, epoch, 
         iterator = enumerate(dataloader)
 
         for iter_i, (brain_tensor, mask_tensor) in iterator:
-            with autograd.detect_anomaly():
 
-                # prepare
-                brain_tensor = brain_tensor.unsqueeze(1).to(device)
-                mask_tensor = mask_tensor.unsqueeze(1).to(device)
+            # prepare
+            brain_tensor = brain_tensor.unsqueeze(1).to(device)
+            mask_tensor = mask_tensor.unsqueeze(1).to(device)
 
-                brain_tensor = F.interpolate(brain_tensor, config.interpolation_size)
-                mask_tensor = F.interpolate(mask_tensor, config.interpolation_size)
+            brain_tensor = F.interpolate(brain_tensor, config.interpolation_size)
+            mask_tensor = F.interpolate(mask_tensor, config.interpolation_size)
 
-                # set_trace()
+            # forward pass
+            mask_tensor_predicted = model(brain_tensor)
+            loss = criterion(mask_tensor_predicted, mask_tensor)
 
-                # forward pass
-                mask_tensor_predicted = model(brain_tensor)
-                loss = criterion(mask_tensor_predicted, mask_tensor)
-
-                # set_trace()
-
+            if is_train:
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
 
-                metric_dict['loss'].append(loss.item())
+            metric_dict['loss'].append(loss.item())
 
     try:
         for title, value in metric_dict.items():
             m = np.mean(value)
-            writer.add_scalar(f"{title}_epoch", m, epoch)
-            print(f'Epoch value: {title}= {m}')
+            phase_name = 'train' if is_train else 'val'
+            if writer is not None:
+                writer.add_scalar(f"{phase_name}_{title}_epoch", m, epoch)
+            print(f'Epoch value: {phase_name} {title}= {m}')
+            metric_dict_epoch[phase_name + '_' + title].append(m)
+
     except Exception as e:
         print ('Exception:', str(e), 'Failed to save writer')
 
-
 def main(args):
+
 
     print(f'Available devices: {torch.cuda.device_count()}')
     # device = torch.device('cuda:1')
@@ -96,16 +96,21 @@ def main(args):
         config = edict(yaml.safe_load(fin))
 
     # setting logs
+    MAKE_LOGS = config.make_logs
     experiment_name = '{}@{}'.format(args.experiment_comment, datetime.now().strftime("%d.%m.%Y-%H:%M:%S"))
     print("Experiment name: {}".format(experiment_name))
     experiment_dir = os.path.join(args.logdir, experiment_name)
-    writer = SummaryWriter(os.path.join(experiment_dir, "tb"))
+
+    writer = SummaryWriter(os.path.join(experiment_dir, "tb")) if MAKE_LOGS else None
     model = V2VModel(config).to(device)
     print('Model created!')
 
     # setting datasets
-    dataset = CatBrainMaskLoader('../fcd_newdataset_tensors/')
-    dataloader = DataLoader(dataset, batch_size=config.opt.train_batch_size, shuffle=True)
+    train_dataset = CatBrainMaskLoader('../fcd_newdataset_tensors/train')
+    val_dataset = CatBrainMaskLoader('../fcd_newdataset_tensors/test')
+
+    train_dataloader = DataLoader(train_dataset, batch_size=config.opt.train_batch_size, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=config.opt.val_batch_size, shuffle=True)
 
     # setting model stuff
     criterion = {
@@ -116,10 +121,16 @@ def main(args):
 
     # training
     print('Start training!')
-    for epoch in range(config.opt.start_epoch, config.opt.n_epochs):
-        print (f'EPOCH: {epoch} ...')
-        one_epoch(model, criterion, opt, config, dataloader, device, writer, epoch, is_train=True)
 
+    metric_dict_epoch = defaultdict(list)
+    try:
+        for epoch in range(config.opt.start_epoch, config.opt.n_epochs):
+            print (f'TRAIN EPOCH: {epoch} ... ')
+            one_epoch(model, criterion, opt, config, train_dataloader, device, writer, epoch, metric_dict_epoch, is_train=True)
+            print (f'VAL EPOCH: {epoch} ... ')
+            one_epoch(model, criterion, opt, config, val_dataloader, device, writer, epoch, metric_dict_epoch, is_train=False)
+    except:
+        np.save('metric_dict_epoch', metric_dict_epoch)
 
 if __name__ == '__main__':
     args = parse_args()

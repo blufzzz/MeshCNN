@@ -4,7 +4,7 @@ from threading import Thread
 from models.layers.mesh_union import MeshUnion
 import numpy as np
 from heapq import heappop, heapify
-
+from IPython.core.debugger import set_trace
 
 class MeshPool(nn.Module):
     
@@ -170,15 +170,21 @@ class MeshPool(nn.Module):
         return key_a, key_b, side_a, side_b, other_side_a, other_side_b, other_keys_a, other_keys_b
 
     @staticmethod
+    # breaks for triangles, there should be at least 1 vertex which incident to all invalid_edges
     def __remove_triplete(mesh, mask, edge_groups, invalid_edges):
-        vertex = set(mesh.edges[invalid_edges[0]])
+        vertex = set(mesh.edges[invalid_edges[0]]) 
         for edge_key in invalid_edges:
             vertex &= set(mesh.edges[edge_key])
             mask[edge_key] = False
             MeshPool.__remove_group(mesh, edge_groups, edge_key)
         mesh.edges_count -= 3
         vertex = list(vertex)
+
+        # try:
         assert(len(vertex) == 1)
+        # except:
+        #     set_trace()
+        
         mesh.remove_vertex(vertex[0])
 
     def __build_queue(self, features, edges_count):

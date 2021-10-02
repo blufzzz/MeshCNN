@@ -2,6 +2,7 @@ import torch.utils.data as data
 import numpy as np
 import pickle
 import os
+from IPython.core.debugger import set_trace
 
 class BaseDataset(data.Dataset):
 
@@ -33,6 +34,7 @@ class BaseDataset(data.Dataset):
                 if i % 500 == 0:
                     print('{} of {}'.format(i, self.size))
                 features = data['edge_features']
+
                 mean = mean + features.mean(axis=1)
                 std = std + features.std(axis=1)
             mean = mean / (i + 1)

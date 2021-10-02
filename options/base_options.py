@@ -35,7 +35,7 @@ class BaseOptions:
         self.parser.add_argument('--seed', type=int, help='if specified, uses seed')
         # visualization params
         self.parser.add_argument('--export_folder', type=str, default='', help='exports intermediate collapses to this folder')
-        #
+        self.parser.add_argument('--save_checkpoint', type=str, default='', help='exports intermediate collapses to this folder')
         self.initialized = True
 
     def parse(self):

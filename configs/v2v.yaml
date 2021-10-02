@@ -1,6 +1,7 @@
 distributed_train: false
 experiment_dir: './logs'
 interpolation_size: [128, 128, 128]  #[91,109,91]
+make_logs: False
 
 opt:
   criterion: "CE"

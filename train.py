@@ -8,8 +8,9 @@ from test import run_test
 if __name__ == '__main__':
     opt = TrainOptions().parse()
     # opt.serial_batches = True  # no shuffle
+    print('Creating DataLoader...')
     dataset = DataLoader(opt)
-    dataset_size = len(dataset)
+    print('DataLoader created!')
 
     print('#training meshes = %d' % dataset_size)
 
@@ -18,8 +19,8 @@ if __name__ == '__main__':
     total_steps = 0
 
     for epoch in range(opt.epoch_count, 
-                        opt.niter + opt.niter_decay + 1):
-    
+                       opt.niter + opt.niter_decay + 1):
+
         epoch_start_time = time.time()
         iter_data_time = time.time()
         epoch_iter = 0

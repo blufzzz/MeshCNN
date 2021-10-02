@@ -2,7 +2,7 @@
 
 ## run the training
 python train.py \
---dataroot datasets/fcd_seg \
+--dataroot ../fcd_newdataset_meshes/prepared/ \
 --name fcd_seg \
 --arch meshunet \
 --dataset_mode segmentation \
@@ -13,4 +13,4 @@ python train.py \
 --batch_size 1 \
 --lr 0.003 \
 --num_aug 20 \
---slide_verts 0.2
+--slide_verts 0.2 
